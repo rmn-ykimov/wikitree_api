@@ -1,5 +1,7 @@
 BASE_URL = 'https://api.wikitree.com/api.php'
 
+DEFAULT_KEY = "Romanov-62"
+
 GET_PROFILE = 'getProfile'
 GET_PERSON = 'getPerson'	
 GET_BIO = 'getBio'
