@@ -23,7 +23,7 @@ def get_credentials() -> tuple[str, str]:
     """
 
     email = os.environ.get("LOGIN_EMAIL") or input("Email: ")
-    password = os.environ.get("LOGIN_PASSWORD") or getpass(f"Password: ")
+    password = os.environ.get("LOGIN_PASSWORD") or getpass("Password: ")
 
     return email, password
 
@@ -59,11 +59,8 @@ def authenticate_session(session: Session, email: str, password: str) -> None:
     authcode = matches.get("authcode")
 
     # Step 2: Send back the authcode to finish the authentication
-    data = {
-        "action": CLIENT_LOGIN,
-        "authcode": authcode
-        }
-    
+    data = {"action": CLIENT_LOGIN, "authcode": authcode}
+
     resp = session.post(BASE_URL, data=data, allow_redirects=False)
 
     resp.raise_for_status()
@@ -80,10 +77,8 @@ def authenticate_session(session: Session, email: str, password: str) -> None:
     if user_name:
         safe_user_name = urllib.parse.quote(user_name)
         session.cookies.set(
-            "wikidb_wtb_UserName",
-            safe_user_name,
-            domain="api.wikitree.com"
-            )
+            "wikidb_wtb_UserName", safe_user_name, domain="api.wikitree.com"
+        )
 
     print(f'User "{user_name}" is successfully authenticated!')
 
@@ -110,10 +105,9 @@ def load_profile(session: Session, key: str) -> dict[str, any]:
     print(f"\nPOST /api.php?getProfile={key}fields={fields}\n")
 
     resp = session.post(
-        BASE_URL,
-        {"action": "getProfile", "key": key, "fields": fields}
-        )
-    
+        BASE_URL, {"action": "getProfile", "key": key, "fields": fields}
+    )
+
     resp.raise_for_status()
 
     return resp.json()
@@ -123,11 +117,17 @@ if __name__ == "__main__":
     # email, password = None, None # uncomment to test without authentication
     email, password = get_credentials()  # comment to test without authentication
 
-    print(f"Starting the session as" + (f'"{email}"' if email else "unauthenticated user") + ".")
+    print(
+        "Starting the session as"
+        + (f'"{email}"' if email else "unauthenticated user")
+        + "."
+    )
     session = prepare_session(email, password)
 
     # As an example, get the logged-in member's profile data itself
-    key = session.cookies.get("wikidb_wtb_UserName") or "Windsor-1" # uses Windsor-1 when not authenticated
+    key = (
+        session.cookies.get("wikidb_wtb_UserName") or "Windsor-1"
+    )  # uses Windsor-1 when not authenticated
     profile = load_profile(session, urllib.parse.unquote(key))
 
     print(json.dumps(profile, indent=2, ensure_ascii=False))
