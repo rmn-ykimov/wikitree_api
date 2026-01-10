@@ -12,3 +12,7 @@ dependencies = [
 dev = [
     "ruff>=0.14.11",
 ]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = []

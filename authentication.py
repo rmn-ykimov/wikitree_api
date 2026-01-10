@@ -6,14 +6,15 @@ https://api.wikitree.com which holds the session state via cookie, as a browser
 would.
 """
 
-from requests import Session
-import re
-from getpass import getpass
-import os
-
-import urllib.parse
 import json
-from constants import BASE_URL, CLIENT_LOGIN
+import os
+import re
+import urllib.parse
+from getpass import getpass
+
+from requests import Session
+
+from constants import BASE_URL, CLIENT_LOGIN, DEFAULT_KEY
 
 
 def get_credentials() -> tuple[str, str]:
@@ -126,8 +127,8 @@ if __name__ == "__main__":
 
     # As an example, get the logged-in member's profile data itself
     key = (
-        session.cookies.get("wikidb_wtb_UserName") or "Windsor-1"
-    )  # uses Windsor-1 when not authenticated
+        session.cookies.get("wikidb_wtb_UserName") or  DEFAULT_KEY
+        )  # uses Windsor-1 when not authenticated
     profile = load_profile(session, urllib.parse.unquote(key))
 
     print(json.dumps(profile, indent=2, ensure_ascii=False))
