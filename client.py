@@ -1,12 +1,13 @@
-from requests import Session
 import os
 import re
 import urllib.parse
 from getpass import getpass
 
+from requests import Session
 
 from constants import (
     BASE_URL,
+    CLIENT_LOGIN,
     DEFAULT_KEY,
     GET_ANCESTORS,
     GET_BIO,
@@ -22,7 +23,6 @@ from constants import (
     GET_RELATIVES,
     GET_WATCHLIST,
     SEARCH_PERSON,
-    CLIENT_LOGIN,
 )
 
 
@@ -101,9 +101,9 @@ def prepare_session(email: str | None, password: str | None) -> Session:
 
     session: Session = Session()
 
-    session.headers.update({
-        'User-Agent': 'TestWikiTreeApp'
-    })
+    # session.headers.update({
+    #     'User-Agent': 'TestWikiTreeApp'
+    # })
 
     if email and password:
         authenticate_session(session, email, password)
