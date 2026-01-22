@@ -26,11 +26,18 @@ from constants import (
     SEARCH_PERSON,
 )
 
-SESSION_FILE_PATH = os.path.join(os.path.dirname(__file__), ".wikitree_session.json")
+SESSION_FILE_PATH = os.path.join(
+    os.path.dirname(__file__),
+    ".wikitree_session.json"
+)
 
 class Client:
 
-    def __init__(self, email: str | None = None, password: str | None = None):
+    def __init__(
+        self,
+        email: str | None = None,
+        password: str | None = None
+    ):
         """
         Initializes the WikiTree API client.
 
@@ -42,10 +49,15 @@ class Client:
             password: Optional login password.
         """
         self.session = Session()
-        self._prepare_session(email, password)
+        self._prepare_session(
+            email,
+            password
+        )
 
     def _prepare_session(
-        self, email: str | None = None, password: str | None = None
+        self,
+        email: str | None = None,
+        password: str | None = None
     ) -> Session:
         """
         Prepares the session for communication with the WikiTree API.
@@ -65,6 +77,7 @@ class Client:
         if self._load_session():
             # Verify session is still valid by attempting a simple call
             error_msg = "Unknown error"
+
             try:
                 user_cookie = self.session.cookies.get("wikidb_wtb_UserName")
                 if not user_cookie:
@@ -78,10 +91,14 @@ class Client:
                     "loaded from cache and verified."
                 )
                 return self.session
+
             except Exception as e:
                 error_msg = str(e)
                 if (
-                    hasattr(e, "response")
+                    hasattr(
+                        e,
+                        "response"
+                    )
                     and e.response is not None
                     and e.response.status_code == 429
                 ):
@@ -95,6 +112,7 @@ class Client:
                 f"Cached session expired or invalid ({error_msg}). "
                 "Re-authenticating..."
             )
+
             self.session.cookies.clear()
 
         # 2. If no valid session, authenticate
@@ -102,7 +120,10 @@ class Client:
         if not email or not password:
             email, password = self._get_credentials()
 
-        self._authenticate_session(email, password)
+        self._authenticate_session(
+            email,
+            password
+        )
         self._save_session()
 
         return self.session
@@ -111,9 +132,20 @@ class Client:
         """Saves session cookies to a JSON file with restricted permissions."""
         cookies = self.session.cookies.get_dict()
         try:
-            with open(SESSION_FILE_PATH, "w") as f:
-                json.dump(cookies, f)
-            os.chmod(SESSION_FILE_PATH, 0o600)
+            with open(
+                SESSION_FILE_PATH,
+                "w"
+            ) as f:
+                json.dump(
+                    cookies,
+                    f
+                )
+
+            os.chmod(
+                SESSION_FILE_PATH,
+                0o600
+            )
+
         except Exception as e:
             print(f"Warning: Could not save session: {e}")
 
@@ -128,18 +160,31 @@ class Client:
             return False
 
         try:
-            with open(SESSION_FILE_PATH, "r") as f:
+            with open(
+                SESSION_FILE_PATH,
+                "r"
+            ) as f:
+
                 cookies = json.load(f)
+
                 for name, value in cookies.items():
                     self.session.cookies.set(
-                        name, value, domain="api.wikitree.com"
+                        name,
+                        value,
+                        domain="api.wikitree.com"
                     )
+
             return True
+
         except Exception as e:
             print(f"Warning: Could not load session: {e}")
             return False
 
-    def _authenticate_session(self, email: str, password: str) -> None:
+    def _authenticate_session(
+        self,
+        email: str,
+        password: str
+    ) -> None:
         """
         Authenticates the session with the provided credentials.
 
@@ -180,9 +225,16 @@ class Client:
         authcode = matches.get("authcode")
 
         # Step 2: Send back the authcode to finish the authentication
-        data = {"action": CLIENT_LOGIN, "authcode": authcode}
+        data = {
+            "action": CLIENT_LOGIN,
+            "authcode": authcode
+        }
 
-        resp = self.session.post(BASE_URL, data=data, allow_redirects=False)
+        resp = self.session.post(
+            BASE_URL,
+            data=data,
+            allow_redirects=False
+        )
 
         resp.raise_for_status()
 
@@ -191,8 +243,15 @@ class Client:
             exit()
 
         result_json = resp.json()
-        login_data = result_json.get("clientLogin", {})
-        user_name = login_data.get("username", "Unknown")
+        login_data = result_json.get(
+            "clientLogin",
+            {}
+        )
+        
+        user_name = login_data.get(
+            "username",
+            "Unknown"
+        )
 
         if user_name != "Unknown":
             self.session.cookies.set(
@@ -200,6 +259,7 @@ class Client:
                 urllib.parse.quote(user_name),
                 domain="api.wikitree.com",
             )
+
         else:
             cookies = self.session.cookies.get_dict()
             user_name = urllib.parse.unquote(
@@ -228,9 +288,19 @@ class Client:
 
     def _post(self, action: str, **kwargs):
         """Internal helper for making POST requests to the API."""
-        data = {"action": action, **kwargs}
-        response = self.session.post(BASE_URL, data=data, timeout=10)
+        data = {
+            "action": action,
+            **kwargs
+        }
+
+        response = self.session.post(
+            BASE_URL,
+            data=data,
+            timeout=10
+        )
+
         response.raise_for_status()
+
         return response.json()
 
     def get_profile(self, key: str = DEFAULT_KEY):
