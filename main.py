@@ -1,7 +1,8 @@
 import json
 import urllib.parse
+
+from client import Client, prepare_session
 from constants import DEFAULT_KEY
-from client import get_profile, prepare_session
 
 if __name__ == "__main__":
     session = prepare_session()
@@ -10,8 +11,9 @@ if __name__ == "__main__":
     user_key = urllib.parse.unquote(user_cookie) if user_cookie else DEFAULT_KEY
 
     try:
-        print(f"Запрос данных для: {DEFAULT_KEY}")
-        result = get_profile(session, key=DEFAULT_KEY)
+        api = Client(session)
+        print(f"Запрос данных для: {user_key}")
+        result = api.get_profile(key=user_key)
 
         formatted_json = json.dumps(
             result,

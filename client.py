@@ -1,6 +1,6 @@
+import json
 import os
 import re
-import json
 import urllib.parse
 from getpass import getpass
 
@@ -137,17 +137,17 @@ def prepare_session(email: str | None = None, password: str | None = None) -> Se
             user_cookie = session.cookies.get("wikidb_wtb_UserName")
             if not user_cookie:
                 raise Exception("Missing session cookies")
-                
+
             user_key = urllib.parse.unquote(user_cookie)
-            get_profile(session, key=user_key)
-            
+            Client(session).get_profile(key=user_key)
+
             print(f"Session for user \"{user_key}\" loaded from cache and verified.")
             return session
         except Exception as e:
             if hasattr(e, 'response') and e.response is not None and e.response.status_code == 429:
                 print("Rate limit exceeded (429). Please wait a few minutes and try again.")
                 return session
-            
+
             print(f"Cached session expired or invalid ({e}). Re-authenticating...")
             session.cookies.clear()
 
@@ -161,107 +161,55 @@ def prepare_session(email: str | None = None, password: str | None = None) -> Se
 
     return session
 
-def get_profile(session:Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_PROFILE, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+class Client:
 
+    def __init__(self, session: Session):
+        self.session = session
 
-def get_person(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_PERSON, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    def _post(self, action: str, **kwargs):
+        data = {"action": action, **kwargs}
+        response = self.session.post(BASE_URL, data=data, timeout=10)
+        response.raise_for_status()
+        return response.json()
 
+    def get_profile(self, key: str = DEFAULT_KEY):
+        return self._post(GET_PROFILE, key=key)
 
-def get_bio(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_BIO, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    def get_person(self, key: str = DEFAULT_KEY):
+        return self._post(GET_PERSON, key=key)
 
+    def get_bio(self, key: str = DEFAULT_KEY):
+        return self._post(GET_BIO, key=key)
 
-def get_photos(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_PHOTOS, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    def get_photos(self, key: str = DEFAULT_KEY):
+        return self._post(GET_PHOTOS, key=key)
 
+    def get_people(self, key: str = DEFAULT_KEY):
+        return self._post(GET_PEOPLE, key=key)
 
-def get_people(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_PEOPLE, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    def get_ancestors(self, key: str = DEFAULT_KEY):
+        return self._post(GET_ANCESTORS, key=key)
 
+    def get_descendants(self, key: str = DEFAULT_KEY):
+        return self._post(GET_DESCENDANTS, key=key)
 
-def get_ancestors(session:Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_ANCESTORS, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    def get_relatives(self, key: str = DEFAULT_KEY):
+        return self._post(GET_RELATIVES, key=key)
 
+    def get_watchlist(self, key: str = DEFAULT_KEY):
+        return self._post(GET_WATCHLIST, key=key)
 
-def get_descendants(
-    session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10
-):
-    params = {"action": GET_DESCENDANTS, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    def get_dna_tests_by_test_taker(self, key: str = DEFAULT_KEY):
+        return self._post(GET_DNA_TESTS_BY_TEST_TAKER, key=key)
 
+    def get_connected_profiles_by_dna_test(self, key: str = DEFAULT_KEY):
+        return self._post(GET_CONNECTED_PROFILES_BY_DNA_TEST, key=key)
 
-def get_relatives(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_RELATIVES, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    def get_connected_dna_tests_by_profile(self, key: str = DEFAULT_KEY):
+        return self._post(GET_CONNECTED_DNA_TESTS_BY_PROFILE, key=key)
 
+    def get_categories(self, key: str = DEFAULT_KEY):
+        return self._post(GET_CATEGORIES, key=key)
 
-def get_watchlist(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_WATCHLIST, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-
-def get_dna_tests_by_test_taker(
-    session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10
-):
-    params = {"action": GET_DNA_TESTS_BY_TEST_TAKER, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-
-def get_connected_profiles_by_dna_test(
-    session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10
-):
-    params = {"action": GET_CONNECTED_PROFILES_BY_DNA_TEST, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-
-def get_connected_dna_tests_by_profile(
-    session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10
-):
-    params = {"action": GET_CONNECTED_DNA_TESTS_BY_PROFILE, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-
-def get_categories(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": GET_CATEGORIES, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-
-def search_person(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
-    params = {"action": SEARCH_PERSON, "key": key}
-    response = session.post(base_url, data=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    def search_person(self, key: str = DEFAULT_KEY):
+        return self._post(SEARCH_PERSON, key=key)
