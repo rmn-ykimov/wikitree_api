@@ -1,20 +1,17 @@
 import json
-
-from client import get_credentials, get_profile, prepare_session
+import urllib.parse
+from constants import DEFAULT_KEY
+from client import get_profile, prepare_session
 
 if __name__ == "__main__":
-    # 1. Получаем логин и пароль (из консоли или переменных окружения)
-    email, password = get_credentials()
+    session = prepare_session()
 
-    # 2. Создаем сессию и проходим аутентификацию
-    session = prepare_session(email, password)
+    user_cookie = session.cookies.get("wikidb_wtb_UserName")
+    user_key = urllib.parse.unquote(user_cookie) if user_cookie else DEFAULT_KEY
 
-    # 3. Вызываем функцию получения профиля, передавая сессию
-    # По умолчанию используется DEFAULT_KEY из constants.py
     try:
-        profile_data = get_profile(session)
-        print("Данные профиля:")
-        result = get_profile(session)
+        print(f"Запрос данных для: {DEFAULT_KEY}")
+        result = get_profile(session, key=DEFAULT_KEY)
 
         formatted_json = json.dumps(
             result,

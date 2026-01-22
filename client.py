@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import urllib.parse
 from getpass import getpass
 
@@ -24,6 +25,8 @@ from constants import (
     GET_WATCHLIST,
     SEARCH_PERSON,
 )
+
+SESSION_FILE_PATH = os.path.join(os.path.dirname(__file__), ".wikitree_session.json")
 
 
 def get_credentials() -> tuple[str, str]:
@@ -75,25 +78,51 @@ def authenticate_session(session: Session, email: str, password: str) -> None:
 
     resp.raise_for_status()
 
-    result_json = resp.json()
-    login_data = result_json.get("clientLogin", {})
-
-    if login_data.get("result") != "Success":
-        print(f"Authentication failed: {login_data.get('result')}")
+    if not resp.ok:
+        print("Cannot authenticate with Wikitree API: failed the authcode verification")
         exit()
 
-    user_name = login_data.get("username")
+    result_json = resp.json()
+    login_data = result_json.get("clientLogin", {})
+    user_name = login_data.get("username", "Unknown")
 
-    if user_name:
-        safe_user_name = urllib.parse.quote(user_name)
-        session.cookies.set(
-            "wikidb_wtb_UserName", safe_user_name, domain="api.wikitree.com"
-        )
+    if user_name != "Unknown":
+        session.cookies.set("wikidb_wtb_UserName", urllib.parse.quote(user_name), domain="api.wikitree.com")
+    else:
+        cookies = session.cookies.get_dict()
+        user_name = urllib.parse.unquote(cookies.get("wikidb_wtb_UserName", "Unknown"))
 
     print(f'User "{user_name}" is successfully authenticated!')
 
 
-def prepare_session(email: str | None, password: str | None) -> Session:
+def save_session(session: Session) -> None:
+    """Saves session cookies to a JSON file with restricted permissions."""
+    cookies = session.cookies.get_dict()
+    try:
+        with open(SESSION_FILE_PATH, "w") as f:
+            json.dump(cookies, f)
+        os.chmod(SESSION_FILE_PATH, 0o600)
+    except Exception as e:
+        print(f"Warning: Could not save session: {e}")
+
+
+def load_session(session: Session) -> bool:
+    """Loads session cookies from a JSON file. Returns True if successful."""
+    if not os.path.exists(SESSION_FILE_PATH):
+        return False
+
+    try:
+        with open(SESSION_FILE_PATH, "r") as f:
+            cookies = json.load(f)
+            for name, value in cookies.items():
+                session.cookies.set(name, value, domain="api.wikitree.com")
+        return True
+    except Exception as e:
+        print(f"Warning: Could not load session: {e}")
+        return False
+
+
+def prepare_session(email: str | None = None, password: str | None = None) -> Session:
     """
     Prepares the session for the communication with Wikitree API,
     for authenticated access to API, fill in optional fields: email & password
@@ -101,66 +130,76 @@ def prepare_session(email: str | None, password: str | None) -> Session:
 
     session: Session = Session()
 
-    # session.headers.update({
-    #     'User-Agent': 'TestWikiTreeApp'
-    # })
+    # 1. Try to load existing session
+    if load_session(session):
+        # Verify session is still valid by attempting a simple call
+        try:
+            user_cookie = session.cookies.get("wikidb_wtb_UserName")
+            if not user_cookie:
+                raise Exception("Missing session cookies")
+                
+            user_key = urllib.parse.unquote(user_cookie)
+            get_profile(session, key=user_key)
+            
+            print(f"Session for user \"{user_key}\" loaded from cache and verified.")
+            return session
+        except Exception as e:
+            if hasattr(e, 'response') and e.response is not None and e.response.status_code == 429:
+                print("Rate limit exceeded (429). Please wait a few minutes and try again.")
+                return session
+            
+            print(f"Cached session expired or invalid ({e}). Re-authenticating...")
+            session.cookies.clear()
 
-    if email and password:
-        authenticate_session(session, email, password)
+    # 2. If no valid session, authenticate
+    # If credentials aren't provided, we'll need to fetch them
+    if not email or not password:
+        email, password = get_credentials()
+
+    authenticate_session(session, email, password)
+    save_session(session)
 
     return session
 
 def get_profile(session:Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_PROFILE, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def get_person(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_PERSON, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def get_bio(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_BIO, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def get_photos(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_PHOTOS, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def get_people(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_PEOPLE, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def get_ancestors(session:Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_ANCESTORS, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
@@ -168,28 +207,22 @@ def get_descendants(
     session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10
 ):
     params = {"action": GET_DESCENDANTS, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def get_relatives(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_RELATIVES, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def get_watchlist(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_WATCHLIST, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
@@ -197,10 +230,8 @@ def get_dna_tests_by_test_taker(
     session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10
 ):
     params = {"action": GET_DNA_TESTS_BY_TEST_TAKER, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
@@ -208,10 +239,8 @@ def get_connected_profiles_by_dna_test(
     session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10
 ):
     params = {"action": GET_CONNECTED_PROFILES_BY_DNA_TEST, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
@@ -219,26 +248,20 @@ def get_connected_dna_tests_by_profile(
     session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10
 ):
     params = {"action": GET_CONNECTED_DNA_TESTS_BY_PROFILE, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def get_categories(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": GET_CATEGORIES, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
 
 
 def search_person(session: Session, key: str = DEFAULT_KEY, base_url: str = BASE_URL, timeout: int = 10):
     params = {"action": SEARCH_PERSON, "key": key}
-
-    response = session.get(base_url, params=params, timeout=timeout)
+    response = session.post(base_url, data=params, timeout=timeout)
     response.raise_for_status()
-
     return response.json()
