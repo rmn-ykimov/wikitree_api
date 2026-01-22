@@ -1,17 +1,13 @@
 import json
-import urllib.parse
 
-from client import Client, prepare_session
-from constants import DEFAULT_KEY
+from client import Client
 
 if __name__ == "__main__":
-    session = prepare_session()
+    api = Client()
 
-    user_cookie = session.cookies.get("wikidb_wtb_UserName")
-    user_key = urllib.parse.unquote(user_cookie) if user_cookie else DEFAULT_KEY
+    user_key = api.user_key
 
     try:
-        api = Client(session)
         print(f"Запрос данных для: {user_key}")
         result = api.get_profile(key=user_key)
 
