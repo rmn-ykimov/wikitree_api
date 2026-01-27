@@ -211,3 +211,6 @@ __marimo__/
 
 # Session file
 .wikitree_session.json
+
+# Data file
+data.json

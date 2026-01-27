@@ -17,6 +17,9 @@ if __name__ == "__main__":
             ensure_ascii=False
         )
 
+        with open("data.json", "w", encoding="utf-8") as f:
+            f.write(formatted_json)
+
         print(formatted_json)
 
     except Exception as e:
