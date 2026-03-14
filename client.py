@@ -33,6 +33,7 @@ SESSION_FILE_PATH = os.path.join(
 
 class Client:
 
+
     def __init__(
         self,
         email: str | None = None,
@@ -247,7 +248,7 @@ class Client:
             "clientLogin",
             {}
         )
-        
+       
         user_name = login_data.get(
             "username",
             "Unknown"
