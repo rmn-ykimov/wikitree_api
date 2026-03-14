@@ -1,5 +1,4 @@
 import sqlite3
-from typing import Optional
 
 DB_NAME = "profiles.db"
 
@@ -19,12 +18,13 @@ def init_db():
         """)
         conn.commit()
 
+
 def save_profile(
         page_name: str,
-        first_name: Optional[str],
+        first_name: str | None,
         lnab: str,
-        birth_year: Optional[int],
-        death_year: Optional[int]
+        birth_year: int | None,
+        death_year: int | None
         ):
     """Сохраняет или обновляет профиль в базе данных."""
     with sqlite3.connect(DB_NAME) as conn:

@@ -1,8 +1,9 @@
 import json
+import pathlib
 
+import database
 from client import Client
 from constants import DEFAULT_KEY
-import database
 
 if __name__ == "__main__":
     database.init_db()
@@ -21,10 +22,10 @@ if __name__ == "__main__":
             profile = profile_data.get("profile", {})
             first_name = profile.get("FirstName")
             last_name = profile.get("LastNameAtBirth")
-            
+
             birth_date = profile.get("BirthDate") or ""
             birth_year = int(birth_date.split("-")[0]) if "-" in birth_date and birth_date.split("-")[0].isdigit() else None
-  
+
             death_date = profile.get("DeathDate") or ""
             death_year = int(death_date.split("-")[0]) if "-" in death_date and death_date.split("-")[0].isdigit() else None
 
@@ -40,8 +41,7 @@ if __name__ == "__main__":
             ensure_ascii=False
         )
 
-        with open("data.json", "w", encoding="utf-8") as f:
-            f.write(formatted_json)
+        pathlib.Path("data.json").write_text(formatted_json, encoding="utf-8")
 
         # print(formatted_json)
 

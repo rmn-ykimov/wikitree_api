@@ -1,5 +1,6 @@
 import json
 import os
+import pathlib
 import re
 import urllib.parse
 from getpass import getpass
@@ -31,8 +32,8 @@ SESSION_FILE_PATH = os.path.join(
     ".wikitree_session.json"
 )
 
-class Client:
 
+class Client:
 
     def __init__(
         self,
@@ -48,6 +49,7 @@ class Client:
         Args:
             email: Optional login email.
             password: Optional login password.
+
         """
         self.session = Session()
         self._prepare_session(
@@ -72,8 +74,8 @@ class Client:
 
         Returns:
             The prepared requests.Session object.
-        """
 
+        """
         # 1. Try to load existing session
         if self._load_session():
             # Verify session is still valid by attempting a simple call
@@ -88,7 +90,7 @@ class Client:
                 self.get_profile(key=user_key)
 
                 print(
-                    f"Session for user \"{user_key}\" "
+                    f'Session for user "{user_key}" '
                     "loaded from cache and verified."
                 )
                 return self.session
@@ -133,19 +135,13 @@ class Client:
         """Saves session cookies to a JSON file with restricted permissions."""
         cookies = self.session.cookies.get_dict()
         try:
-            with open(
-                SESSION_FILE_PATH,
-                "w"
-            ) as f:
+            with pathlib.Path(SESSION_FILE_PATH).open("w") as f:
                 json.dump(
                     cookies,
                     f
                 )
 
-            os.chmod(
-                SESSION_FILE_PATH,
-                0o600
-            )
+            pathlib.Path(SESSION_FILE_PATH).chmod(0o600)
 
         except Exception as e:
             print(f"Warning: Could not save session: {e}")
@@ -156,15 +152,13 @@ class Client:
 
         Returns:
             True if session was loaded successfully, False otherwise.
+
         """
-        if not os.path.exists(SESSION_FILE_PATH):
+        if not pathlib.Path(SESSION_FILE_PATH).exists():
             return False
 
         try:
-            with open(
-                SESSION_FILE_PATH,
-                "r"
-            ) as f:
+            with pathlib.Path(SESSION_FILE_PATH).open("r") as f:
 
                 cookies = json.load(f)
 
@@ -196,8 +190,8 @@ class Client:
         Args:
             email: User's login email.
             password: User's login password.
-        """
 
+        """
         # Step 1: Obtain the authcode
         data = {
             "action": CLIENT_LOGIN,
@@ -248,7 +242,7 @@ class Client:
             "clientLogin",
             {}
         )
-       
+
         user_name = login_data.get(
             "username",
             "Unknown"
@@ -275,7 +269,6 @@ class Client:
         Loads credentials from environment variables (if provided), otherwise asks
         user for them.
         """
-
         email = os.environ.get("LOGIN_EMAIL") or input("Email: ")
         password = os.environ.get("LOGIN_PASSWORD") or getpass("Password: ")
 
